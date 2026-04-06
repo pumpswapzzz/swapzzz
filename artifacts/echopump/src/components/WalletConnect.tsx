@@ -1,5 +1,5 @@
 import React from 'react';
 
-export function WalletConnect() {
+export default function WalletConnect() {
   return <div>Wallet Connect Component</div>;
 }

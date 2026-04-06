@@ -1,5 +1,5 @@
 import React from 'react';
 
-export function PortfolioSidebar() {
+export default function PortfolioSidebar() {
   return <div>Portfolio Sidebar Component</div>;
 }

@@ -1,5 +1,5 @@
 import React from 'react';
 
-export function LiveFeed() {
+export default function LiveFeed() {
   return <div>Live Feed Component</div>;
 }
