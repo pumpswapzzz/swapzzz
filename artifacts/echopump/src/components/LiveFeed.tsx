@@ -1,7 +1,19 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { env } from '@/lib/env';
+
+interface Trade {
+  mint: string;
+  token?: { name?: string; symbol?: string; image?: string };
+  txType: 'buy' | 'sell' | 'create';
+  solAmount?: number;
+  tokenAmount?: number;
+  price?: number;
+  signature: string;
+  traderPublicKey?: string;
+  timestamp?: number;
+}
 
 function formatTime(timestamp: number) {
   const date = new Date(timestamp);
@@ -9,8 +21,9 @@ function formatTime(timestamp: number) {
 }
 
 export default function LiveFeed() {
-  const [trades, setTrades] = useState<any[]>([]);
-  const [wsStatus, setWsStatus] = useState('Connecting...');
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [status, setStatus] = useState('Connecting to PumpPortal...');
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const wsUrl = env.NEXT_PUBLIC_PUMP_PORTAL_API_KEY
@@ -18,9 +31,10 @@ export default function LiveFeed() {
       : 'wss://pumpportal.fun/api/data';
 
     const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
 
     ws.onopen = () => {
-      setWsStatus('✅ Connected to PumpPortal');
+      setStatus('✅ Connected to PumpPortal - Listening for trades');
       ws.send(JSON.stringify({ method: 'subscribeNewToken' }));
       ws.send(JSON.stringify({ method: 'subscribeTokenTrade', keys: [] }));
     };
@@ -28,108 +42,112 @@ export default function LiveFeed() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('WebSocket data:', data);
+        console.log('WebSocket data received:', data);
 
-        if (data.type === 'trade' || data.txType === 'buy' || data.txType === 'sell') {
-          setTrades((prev) => [{ ...data, receivedAt: Date.now() }, ...prev].slice(0, 50));
+        let trade: Trade | null = null;
+
+        if (data.txType === 'buy' || data.txType === 'sell') {
+          trade = {
+            mint: data.mint,
+            token: data.token,
+            txType: data.txType,
+            solAmount: Number(data.solAmount ?? data.sol_amount ?? data.amount ?? 0),
+            tokenAmount: Number(data.tokenAmount ?? data.token_amount ?? 0),
+            price: Number(data.price ?? data.price_sol ?? data.pricePerToken ?? 0),
+            signature: data.signature,
+            traderPublicKey: data.traderPublicKey || data.user,
+            timestamp: Date.now(),
+          };
+        } else if (data.txType === 'create' || data.type === 'create') {
+          trade = {
+            mint: data.mint,
+            token: { name: data.name || 'New Token', image: data.image, symbol: data.symbol },
+            txType: 'create',
+            solAmount: Number(data.initialBuy ?? 0),
+            tokenAmount: undefined,
+            price: undefined,
+            signature: data.signature,
+            traderPublicKey: data.traderPublicKey || data.creator,
+            timestamp: Date.now(),
+          };
         }
-      } catch (e) {
-        console.error('Parse error', e);
+
+        if (trade) {
+          setTrades((prev) => [trade, ...prev].slice(0, 30));
+        }
+      } catch (err) {
+        console.error('Failed to parse WebSocket message:', err);
       }
     };
 
-    ws.onerror = () => setWsStatus('❌ WebSocket error');
-    ws.onclose = () => setWsStatus('Disconnected');
+    ws.onerror = () => setStatus('❌ WebSocket error');
+    ws.onclose = () => setStatus('Disconnected from PumpPortal');
 
-    return () => ws.close();
+    return () => {
+      ws.close();
+      wsRef.current = null;
+    };
   }, []);
 
   return (
-    <div className="p-4 h-full overflow-auto">
-      <div className="mb-4 flex items-center gap-2 text-sm text-emerald-400">
-        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-        {wsStatus}
-      </div>
+    <div className="space-y-3">
+      <div className="text-green-400 text-sm font-medium">{status}</div>
 
-      <div className="space-y-4">
-        {trades.length === 0 && (
-          <div className="rounded-3xl border border-gray-700 bg-zinc-950 p-8 text-center text-sm text-zinc-500">
-            Waiting for PumpPortal buy/sell trades...
-          </div>
-        )}
+      {trades.length === 0 && (
+        <div className="text-gray-400 text-center py-8">Waiting for first trades...</div>
+      )}
 
-        {trades.map((trade, index) => {
-          const isBuy = trade.txType === 'buy';
-          const mint = trade.mint || trade.token?.mint || trade.market?.mint || trade.tokenAddress || trade.address || '';
-          const symbol = trade.symbol || trade.token?.symbol || trade.name || 'TOKEN';
-          const name = trade.name || symbol;
-          const image =
-            trade.metadata?.image ||
-            trade.token?.image ||
-            trade.token?.logo ||
-            trade.image ||
-            trade.icon ||
-            'https://via.placeholder.com/48?text=?';
-          const amount = Number(trade.solAmount ?? trade.sol_amount ?? trade.amount ?? 0);
-          const price = Number(trade.price ?? trade.price_sol ?? trade.pricePerToken ?? 0);
-          const time = trade.timestamp ? Number(trade.timestamp) * 1000 : trade.receivedAt;
+      {trades.map((trade, index) => {
+        const imageSrc =
+          trade.token?.image ||
+          `https://via.placeholder.com/48/4F46E5/FFFFFF?text=${encodeURIComponent(trade.token?.symbol || '?')}`;
+        const displayName = trade.token?.name || `${trade.mint.slice(0, 8)}...`;
+        const displaySymbol = trade.token?.symbol || 'TOKEN';
+        const isBuy = trade.txType === 'buy';
 
-          return (
-            <div
-              key={`${mint}-${index}-${trade.signature ?? trade.receivedAt}`}
-              className="flex flex-col gap-4 rounded-3xl border border-zinc-800 bg-zinc-950 p-4 shadow-[0_0_0_1px_rgba(148,163,184,0.08)] transition hover:border-violet-500/60 hover:bg-zinc-900"
-            >
-              <div className="flex items-start gap-3">
-                <img
-                  src={image}
-                  alt={name}
-                  className="h-12 w-12 rounded-full object-cover"
-                  onError={(event) => {
-                    event.currentTarget.src = 'https://via.placeholder.com/48?text=?';
-                  }}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 text-base font-semibold text-white">
-                    <span className="truncate">{name}</span>
-                    <span className="text-xs text-zinc-500">{symbol}</span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-400">
-                    <span className="rounded-full border border-zinc-700 px-2 py-1">CA: {mint ? `${mint.slice(0, 8)}...` : 'unknown'}</span>
-                    <span className="rounded-full border border-zinc-700 px-2 py-1">{formatTime(time)}</span>
-                  </div>
-                </div>
-                <div className={`rounded-full px-3 py-1 text-xs font-semibold ${isBuy ? 'bg-emerald-500/15 text-emerald-300' : 'bg-pink-500/15 text-pink-300'}`}>
-                  {isBuy ? 'BUY' : 'SELL'}
-                </div>
-              </div>
+        return (
+          <div
+            key={`${trade.signature || trade.mint}-${index}`}
+            className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-purple-500 transition-all"
+          >
+            <div className="flex gap-4">
+              <img
+                src={imageSrc}
+                alt={displayName}
+                className="w-12 h-12 rounded-full object-cover"
+                onError={(event) => {
+                  event.currentTarget.src = 'https://via.placeholder.com/48/4F46E5/FFFFFF?text=?';
+                }}
+              />
 
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-2xl bg-zinc-900 p-3 text-sm text-zinc-300">
-                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Amount</div>
-                  <div className="mt-1 text-white">{amount.toFixed(2)} SOL</div>
-                </div>
-                <div className="rounded-2xl bg-zinc-900 p-3 text-sm text-zinc-300">
-                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Price</div>
-                  <div className="mt-1 text-white">{price ? price.toFixed(4) : '-'}</div>
-                </div>
-              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-white truncate">{displayName}</div>
+                <div className="text-xs text-gray-500 font-mono truncate">{trade.mint}</div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <button
-                  type="button"
-                  className="rounded-2xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-violet-500"
-                  onClick={() => navigator.clipboard.writeText(mint)}
+                <div
+                  className={`mt-1 text-sm font-medium flex items-center gap-2 ${
+                    trade.txType === 'buy'
+                      ? 'text-green-500'
+                      : trade.txType === 'sell'
+                      ? 'text-red-500'
+                      : 'text-purple-400'
+                  }`}
                 >
-                  Copy Trade
-                </button>
-                <span className="text-xs text-zinc-500">
-                  {trade.traderPublicKey ? `${trade.traderPublicKey.slice(0, 4)}...${trade.traderPublicKey.slice(-4)}` : 'Anonymous'}
-                </span>
+                  {trade.txType.toUpperCase()}
+                  {trade.solAmount ? `• ${trade.solAmount.toFixed(4)} SOL` : null}
+                </div>
               </div>
+
+              <button
+                onClick={() => navigator.clipboard.writeText(trade.mint)}
+                className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm whitespace-nowrap"
+              >
+                Copy CA
+              </button>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
