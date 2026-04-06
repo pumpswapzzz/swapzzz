@@ -4,8 +4,19 @@ import { Link, useLocation } from "wouter";
 import { Activity, TrendingUp, Trophy, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-export function Navbar({ connectionStatus }: { connectionStatus: string }) {
+interface NavbarProps {
+  connectionStatus: string;
+  supabaseStatus: string;
+  wsError?: string | null;
+}
+
+export function Navbar({ connectionStatus, supabaseStatus, wsError }: NavbarProps) {
   const [location] = useLocation();
   const { connected } = useWallet();
 
@@ -14,6 +25,38 @@ export function Navbar({ connectionStatus }: { connectionStatus: string }) {
     { href: "/trending", label: "Trending", icon: TrendingUp },
     { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   ];
+
+  const wsColor =
+    connectionStatus === "connected"
+      ? "bg-green-500"
+      : connectionStatus === "connecting"
+      ? "bg-yellow-500 animate-pulse"
+      : connectionStatus === "error"
+      ? "bg-red-500"
+      : "bg-gray-600";
+
+  const wsLabel =
+    connectionStatus === "connected"
+      ? "PumpPortal WS: Connected ✓"
+      : connectionStatus === "connecting"
+      ? "PumpPortal WS: Connecting..."
+      : connectionStatus === "error"
+      ? `PumpPortal WS: Error – ${wsError || 'unknown'}`
+      : "PumpPortal WS: Disconnected";
+
+  const sbColor =
+    supabaseStatus === "connected"
+      ? "bg-blue-400"
+      : supabaseStatus === "connecting"
+      ? "bg-blue-400/40 animate-pulse"
+      : "bg-red-500";
+
+  const sbLabel =
+    supabaseStatus === "connected"
+      ? "Supabase Realtime: Connected ✓"
+      : supabaseStatus === "connecting"
+      ? "Supabase Realtime: Connecting..."
+      : "Supabase Realtime: Disconnected";
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -42,7 +85,7 @@ export function Navbar({ connectionStatus }: { connectionStatus: string }) {
             ))}
           </nav>
         </div>
-        
+
         <Sheet>
           <SheetTrigger asChild>
             <Button
@@ -77,24 +120,39 @@ export function Navbar({ connectionStatus }: { connectionStatus: string }) {
             </div>
           </SheetContent>
         </Sheet>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <div className="w-full flex-1 md:w-auto md:flex-none">
-            {/* Optional search or other controls */}
+
+        <div className="flex flex-1 items-center justify-end space-x-3">
+          <div className="hidden sm:flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 cursor-default" data-testid="ws-status">
+                  <div className={`h-2 w-2 rounded-full ${wsColor}`} />
+                  <span className="text-xs text-muted-foreground font-mono hidden lg:block">
+                    {connectionStatus === 'connected' ? 'WS ✓' : connectionStatus === 'error' ? 'WS ✗' : 'WS...'}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs font-mono">{wsLabel}</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 cursor-default" data-testid="sb-status">
+                  <div className={`h-2 w-2 rounded-full ${sbColor}`} />
+                  <span className="text-xs text-muted-foreground font-mono hidden lg:block">
+                    {supabaseStatus === 'connected' ? 'SB ✓' : 'SB...'}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs font-mono">{sbLabel}</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
-          <div className="flex items-center gap-2">
-            <div
-              className={`h-2 w-2 rounded-full ${
-                connectionStatus === "connected"
-                  ? "bg-green-500"
-                  : connectionStatus === "connecting"
-                  ? "bg-yellow-500"
-                  : "bg-red-500"
-              }`}
-              title={`WebSocket: ${connectionStatus}`}
-              data-testid="ws-status"
-            />
-            <WalletMultiButton className="!bg-primary !text-primary-foreground hover:!bg-primary/90 !h-9 !px-4 !py-2 !rounded-md !text-sm !font-medium" />
-          </div>
+
+          <WalletMultiButton className="!bg-primary !text-primary-foreground hover:!bg-primary/90 !h-9 !px-4 !py-2 !rounded-md !text-sm !font-medium" />
         </div>
       </div>
     </nav>

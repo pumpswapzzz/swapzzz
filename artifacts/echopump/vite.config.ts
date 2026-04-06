@@ -54,6 +54,7 @@ export default defineConfig({
     },
     dedupe: ["react", "react-dom"],
   },
+  envPrefix: ["VITE_", "NEXT_PUBLIC_"],
   define: {
     global: "globalThis",
   },

@@ -46,8 +46,8 @@ export function Trending() {
                 href={`/token/${token.mint}`}
                 className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-colors"
               >
-                {token.uri ? (
-                  <img src={token.uri} alt={token.symbol} className="h-10 w-10 rounded-full object-cover bg-muted" />
+                {token.imageUri ? (
+                  <img src={token.imageUri} alt={token.symbol} className="h-10 w-10 rounded-full object-cover bg-muted" />
                 ) : (
                   <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
                     {token.symbol?.substring(0, 2) || '?'}
