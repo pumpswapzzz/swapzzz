@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { WalletContextProvider } from './wallet-provider'
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'EchoPump',
   description: 'Solana Pump.Fun trading platform',
