@@ -6,7 +6,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  output: 'standalone',     // Use standalone output instead of static export
+  output: 'standalone',
   distDir: '.next',
 };
 
