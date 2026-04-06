@@ -1,194 +1,164 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
-import { env } from '../lib/env';
+import { useEffect, useState } from 'react';
 
-export interface LiveTrade {
-  mint: string;
-  traderPublicKey: string;
-  txType: 'buy' | 'sell';
-  solAmount: number;
-  tokenAmount: number;
-  timestamp: number;
-  name: string;
-  symbol: string;
-  uri: string;
-  imageUri: string;
-  is_migrated: boolean;
-  marketCapSol?: number;
-  signature?: string;
-}
-
-export interface NewToken {
-  mint: string;
-  name: string;
-  symbol: string;
-  uri: string;
-  imageUri: string;
-  initialBuy: number;
-  marketCapSol: number;
-  creator: string;
-  timestamp: number;
-}
-
-interface PumpPortalState {
-  liveTrades: LiveTrade[];
-  newTokens: NewToken[];
-  migratedMints: Set<string>;
-  connectionStatus: 'connected' | 'connecting' | 'disconnected' | 'error';
-  wsError: string | null;
-}
-
-const PumpPortalContext = createContext<PumpPortalState>({
-  liveTrades: [],
-  newTokens: [],
-  migratedMints: new Set(),
-  connectionStatus: 'disconnected',
-  wsError: null,
-});
-
-const API_KEY = env.NEXT_PUBLIC_PUMP_PORTAL_API_KEY;
-
-export function PumpPortalProvider({ children }: { children: ReactNode }) {
-  const [liveTrades, setLiveTrades] = useState<LiveTrade[]>([]);
-  const [newTokens, setNewTokens] = useState<NewToken[]>([]);
-  const [migratedMints, setMigratedMints] = useState<Set<string>>(new Set());
-  const migratedMintsRef = useRef<Set<string>>(new Set());
-  const [connectionStatus, setConnectionStatus] = useState<PumpPortalState['connectionStatus']>('disconnected');
-  const [wsError, setWsError] = useState<string | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectRef = useRef<number | NodeJS.Timeout | null>(null);
-  const destroyedRef = useRef(false);
+export function PumpPortalProvider({ children }: { children: React.ReactNode }) {
+  const [liveTrades, setLiveTrades] = useState<any[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState('Connecting to PumpPortal...');
 
   useEffect(() => {
-    destroyedRef.current = false;
+    const API_KEY = process.env.NEXT_PUBLIC_PUMP_PORTAL_API_KEY || '';
+    const wsUrl = API_KEY
+      ? `wss://pumpportal.fun/api/data?api-key=${API_KEY}`
+      : 'wss://pumpportal.fun/api/data';
 
-    const connect = () => {
-      if (destroyedRef.current) return;
-      setConnectionStatus('connecting');
-      setWsError(null);
+    const ws = new WebSocket(wsUrl);
 
-      const wsUrl = API_KEY
-        ? `wss://pumpportal.fun/api/data?api-key=${API_KEY}`
-        : 'wss://pumpportal.fun/api/data';
-
-      console.log('[PumpPortal WS] Connecting...', API_KEY ? '(with API key)' : '(no key)');
-
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        if (destroyedRef.current) { ws.close(); return; }
-        setConnectionStatus('connected');
-        setWsError(null);
-        console.log('[PumpPortal WS] Connected ✓');
-
-        ws.send(JSON.stringify({ method: 'subscribeNewToken' }));
-        ws.send(JSON.stringify({ method: 'subscribe', channel: 'trades' }));
-        ws.send(JSON.stringify({ method: 'subscribeMigration' }));
-        if (API_KEY) {
-          ws.send(JSON.stringify({ method: 'subscribeAccountTrade', keys: ['all'] }));
-          console.log('[PumpPortal WS] subscribeAccountTrade active (API key)');
-        }
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('[WebSocket received]', data);
-
-          if (data.txType === 'buy' || data.txType === 'sell') {
-            const tradeBase: Omit<LiveTrade, 'imageUri'> = {
-              mint: data.mint || data.tokenAddress || '',
-              traderPublicKey: data.traderPublicKey || data.user || '',
-              txType: data.txType,
-              solAmount: Number(data.solAmount ?? data.sol_amount ?? data.amount ?? 0),
-              tokenAmount: Number(data.tokenAmount ?? data.token_amount ?? 0),
-              timestamp: data.timestamp ? Number(data.timestamp) * 1000 : Date.now(),
-              name: data.name || data.symbol || '',
-              symbol: data.symbol || data.name || data.mint?.substring(0, 6) || '',
-              uri: data.uri || data.metadata?.uri || '',
-              is_migrated: migratedMintsRef.current.has(data.mint),
-              marketCapSol: data.marketCapSol != null ? Number(data.marketCapSol) : undefined,
-              signature: data.signature,
-            };
-
-            setLiveTrades((prev) => [{ ...tradeBase, imageUri: '' }, ...prev].slice(0, 200));
-          }
-
-          if (data.txType === 'create' || (data.mint && data.name && data.symbol && !data.txType)) {
-            const uri = data.uri || data.metadata?.uri || '';
-            const tokenBase: NewToken = {
-              mint: data.mint,
-              name: data.name,
-              symbol: data.symbol,
-              uri,
-              imageUri: '',
-              initialBuy: Number(data.initialBuy ?? 0),
-              marketCapSol: Number(data.marketCapSol ?? 0),
-              creator: data.traderPublicKey || data.creator || '',
-              timestamp: data.timestamp ? Number(data.timestamp) * 1000 : Date.now(),
-            };
-
-            setNewTokens((prev) => [tokenBase, ...prev].slice(0, 100));
-          }
-
-          if (data.signature && data.mint && !data.txType) {
-            console.log('[PumpPortal WS] Migration:', data.mint);
-            migratedMintsRef.current = new Set([...migratedMintsRef.current, data.mint]);
-            setMigratedMints((prev) => new Set([...prev, data.mint]));
-            setLiveTrades((prev) =>
-              prev.map((t) => (t.mint === data.mint ? { ...t, is_migrated: true } : t))
-            );
-          }
-        } catch (e) {
-          console.error('[PumpPortal WS] Parse error:', e);
-        }
-      };
-
-      ws.onclose = (evt) => {
-        if (destroyedRef.current) return;
-        setConnectionStatus('disconnected');
-        console.warn('[PumpPortal WS] Closed – reconnecting in 3s... code:', evt.code);
-        reconnectRef.current = setTimeout(connect, 3000);
-      };
-
-      ws.onerror = () => {
-        console.error('[PumpPortal WS] Socket error');
-        setConnectionStatus('error');
-        setWsError('WebSocket error – retrying...');
-        ws.close();
-      };
+    ws.onopen = () => {
+      setConnectionStatus('✅ Connected - Listening for real buy/sell trades');
+      console.log('PumpPortal WebSocket connected');
+      ws.send(JSON.stringify({ method: 'subscribeNewToken' }));
+      ws.send(JSON.stringify({ method: 'subscribeTokenTrade', keys: [] }));
     };
 
-    connect();
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
 
-    return () => {
-      destroyedRef.current = true;
-      clearTimeout(reconnectRef.current);
-      wsRef.current?.close();
+        let trade: any = null;
+
+        if (data.txType === 'buy' || data.txType === 'sell') {
+          trade = {
+            mint: data.mint,
+            name: data.name || data.token?.name,
+            symbol: data.symbol || data.token?.symbol,
+            image: data.image || data.metadata?.image || data.uri || data.token?.image,
+            txType: data.txType,
+            solAmount: data.solAmount,
+            tokenAmount: data.tokenAmount,
+            signature: data.signature,
+            timestamp: Date.now(),
+          };
+        } else if (data.txType === 'create' || data.method?.includes('create')) {
+          trade = {
+            mint: data.mint,
+            name: data.name || 'New Token',
+            symbol: data.symbol,
+            image: data.image || data.metadata?.image || data.uri,
+            txType: 'create',
+            initialBuy: data.initialBuy,
+            signature: data.signature,
+            timestamp: Date.now(),
+          };
+        }
+
+        if (trade) {
+          setLiveTrades((prev) => [trade, ...prev].slice(0, 60));
+        }
+      } catch (e) {
+        console.error('Failed to parse PumpPortal message:', e);
+      }
     };
+
+    ws.onerror = () => setConnectionStatus('❌ WebSocket error - reconnecting...');
+    ws.onclose = () => setConnectionStatus('Disconnected - reconnecting...');
+
+    return () => ws.close();
   }, []);
 
   return (
-    <PumpPortalContext.Provider value={{ liveTrades, newTokens, migratedMints, connectionStatus, wsError }}>
+    <>
       {children}
-    </PumpPortalContext.Provider>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-zinc-950 border-r border-zinc-800">
+        <div className="sticky top-0 bg-zinc-950 pb-3 border-b border-zinc-800 z-10">
+          <div className="text-green-400 text-sm font-medium flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            {connectionStatus}
+          </div>
+        </div>
+
+        {liveTrades.length === 0 && (
+          <div className="text-gray-400 text-center py-12">Waiting for first trades...</div>
+        )}
+
+        {liveTrades.map((trade, index) => (
+          <div
+            key={`${trade.signature}-${index}`}
+            className="bg-zinc-900 border border-zinc-800 hover:border-purple-500 rounded-2xl p-4 flex gap-4 transition-all"
+          >
+            <img
+              src={
+                trade.image ||
+                `https://via.placeholder.com/48/4F46E5/FFFFFF?text=${encodeURIComponent(trade.symbol?.[0] || '?')}`
+              }
+              alt={trade.name}
+              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48/4F46E5/FFFFFF?text=?';
+              }}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-white truncate">{trade.name || trade.mint.slice(0, 12) + '...'}</div>
+              <div className="text-xs text-gray-500 font-mono break-all mt-0.5">{trade.mint}</div>
+
+              <div
+                className={`mt-2 text-sm font-semibold flex items-center gap-2 ${
+                  trade.txType === 'buy'
+                    ? 'text-green-500'
+                    : trade.txType === 'sell'
+                    ? 'text-red-500'
+                    : 'text-purple-400'
+                }`}
+              >
+                {trade.txType.toUpperCase()}
+                {trade.solAmount && ` • ${Number(trade.solAmount).toFixed(4)} SOL`}
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigator.clipboard.writeText(trade.mint)}
+              className="self-start px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-xl text-sm font-medium whitespace-nowrap transition"
+            >
+              Copy CA
+            </button>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
+// Stub exports for backward compatibility
 export function usePumpPortal() {
-  return useContext(PumpPortalContext);
+  return { liveTrades: [], connectionStatus: 'Disconnected' };
 }
 
-export async function resolveTokenImage(uri: string) {
-  try {
-    if (!uri) return '';
-    const res = await fetch(uri);
-    const json = await res.json();
-    return json.image || json.image_uri || '';
-  } catch (e) {
-    return '';
-  }
+export function resolveTokenImage(image: string | undefined, symbol: string = ''): string {
+  if (image) return image;
+  if (!symbol) return 'https://via.placeholder.com/48/4F46E5/FFFFFF?text=?';
+  return `https://via.placeholder.com/48/4F46E5/FFFFFF?text=${encodeURIComponent(symbol[0])}`;
 }
+
+// Type exports for backward compatibility
+export type LiveTrade = {
+  mint: string;
+  name: string;
+  symbol: string;
+  image?: string;
+  txType: 'buy' | 'sell' | 'create';
+  solAmount?: number;
+  tokenAmount?: number;
+  signature: string;
+  timestamp: number;
+};
+
+export type NewToken = {
+  mint: string;
+  name: string;
+  symbol: string;
+  image?: string;
+  creator: string;
+  signature: string;
+  timestamp: number;
+};
 
