@@ -85,20 +85,16 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
             key={`${trade.signature}-${index}`}
             className="bg-zinc-900 border border-zinc-800 hover:border-purple-500 rounded-2xl p-4 flex gap-4 transition-all"
           >
-            {trade.image ? (
-              <img
-                src={trade.image}
-                alt={trade.name}
-                className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                {(trade.symbol || '?').charAt(0).toUpperCase()}
-              </div>
-            )}
+            <img
+              src={trade.image 
+                ? trade.image 
+                : `https://via.placeholder.com/48/1F2937/FFFFFF?text=${(trade.symbol || trade.name || '?').slice(0,1)}`}
+              alt={trade.name || 'Token'}
+              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48/1F2937/FFFFFF?text=?';
+              }}
+            />
             <div className="flex-1 min-w-0">
               <div className="font-bold text-white truncate">{trade.name || (trade.mint?.slice(0, 12) ?? '---') + '...'}</div>
               <div className="text-xs text-gray-500 font-mono break-all mt-0.5">{trade.mint}</div>
