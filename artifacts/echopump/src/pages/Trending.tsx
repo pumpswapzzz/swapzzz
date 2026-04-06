@@ -1,114 +1,56 @@
 'use client';
 
-import { useGetTrendingBroadcasts } from "@workspace/api-client-react";
-import { usePumpPortalWS } from "@/hooks/usePumpPortalWS";
-import { BroadcastCard } from "@/components/BroadcastCard";
-import { Link } from "wouter";
-import { Flame, Rocket, ArrowRightLeft } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { TokenBadge } from "@/components/TokenBadge";
+import { usePumpPortalWS } from '@/hooks/usePumpPortalWS';
 
-export function Trending() {
-  const { newTokens, migratedMints } = usePumpPortalWS();
-  const { data: trending, isLoading: trendingLoading } = useGetTrendingBroadcasts({ limit: 20 });
+export default function Trending() {
+  const { newTokens } = usePumpPortalWS();
 
   return (
-    <div className="container max-w-screen-xl px-4 md:px-8 py-8 space-y-12">
-      <section>
-        <h2 className="text-2xl font-bold font-mono uppercase tracking-tighter flex items-center gap-2 mb-6">
-          <Flame className="h-6 w-6 text-orange-500" />
-          Hot Broadcasts
-        </h2>
-        {trendingLoading ? (
-          <div className="text-center py-10">Loading trending...</div>
+    <div className="p-6 space-y-6">
+      <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+        <span className="text-orange-500">🔥</span>
+        Live Feed
+      </h2>
+
+      <div className="space-y-3">
+        {newTokens.length === 0 ? (
+          <div className="text-gray-400 text-center py-12">
+            Waiting for real buy/sell trades...
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trending?.broadcasts?.slice(0, 6).map((broadcast: any) => (
-              <BroadcastCard key={broadcast.id} broadcast={broadcast} />
-            ))}
-            {(!trending?.broadcasts || trending.broadcasts.length === 0) && (
-              <div className="col-span-full text-center py-10 text-muted-foreground border border-dashed border-border rounded-xl">
-                No trending broadcasts yet.
+          newTokens.slice(0, 30).map((token: any, index: number) => (
+            <div
+              key={index}
+              className="bg-zinc-900 border border-zinc-800 hover:border-purple-500 rounded-2xl p-5 transition-all"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-bold text-lg text-white">
+                    {token.name || 'New Token'}
+                  </div>
+                  <div className="text-xs text-gray-500 font-mono mt-1 break-all">
+                    {token.mint}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => navigator.clipboard.writeText(token.mint)}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-xl text-sm font-medium"
+                >
+                  Copy CA
+                </button>
               </div>
-            )}
-          </div>
+
+              <div className={`mt-4 text-sm font-semibold ${
+                token.txType === 'buy' ? 'text-green-500' :
+                token.txType === 'sell' ? 'text-red-500' : 'text-purple-400'
+              }`}>
+                {token.txType ? token.txType.toUpperCase() : 'CREATE'}
+                {token.solAmount && ` • ${Number(token.solAmount).toFixed(4)} SOL`}
+              </div>
+            </div>
+          ))
         )}
-      </section>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <section>
-          <h2 className="text-2xl font-bold font-mono uppercase tracking-tighter flex items-center gap-2 mb-6">
-            <Rocket className="h-6 w-6 text-primary" />
-            New Launches
-          </h2>
-          <div className="space-y-4">
-            {(newTokens ?? []).slice(0, 10).map((token, i) => (
-              <Link 
-                key={`${token.mint}-${i}`} 
-                href={`/token/${token.mint}`}
-                className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-colors"
-              >
-                {token.imageUri ? (
-                  <img src={token.imageUri} alt={token.symbol} className="h-10 w-10 rounded-full object-cover bg-muted" />
-                ) : (
-                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
-                    {token.symbol?.substring(0, 2) || '?'}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between">
-                    <span className="font-bold truncate">{token.name} (${token.symbol})</span>
-                    <span className="text-xs text-muted-foreground font-mono">
-                      {token.timestamp ? formatDistanceToNow(token.timestamp, { addSuffix: true }) : 'Just now'}
-                    </span>
-                  </div>
-                  <div className="text-xs font-mono text-muted-foreground mt-1">
-                    MC: {(token.marketCapSol ?? 0).toFixed(1)} SOL
-                  </div>
-                </div>
-              </Link>
-            ))}
-            {newTokens.length === 0 && (
-              <div className="text-center py-10 text-muted-foreground border border-dashed border-border rounded-xl">
-                Waiting for new launches...
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold font-mono uppercase tracking-tighter flex items-center gap-2 mb-6">
-            <ArrowRightLeft className="h-6 w-6 text-purple-500" />
-            Graduated (PumpSwap)
-          </h2>
-          <div className="space-y-4">
-            {(migratedMints ? Array.from(migratedMints) : []).slice(0, 10).map((mint, i) => (
-              <Link 
-                key={`${mint}-${i}`} 
-                href={`/token/${mint}`}
-                className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-purple-500/50 transition-colors"
-              >
-                <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
-                  {mint.substring(0, 2)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold truncate font-mono">{mint.substring(0, 8)}...</span>
-                    <TokenBadge isMigrated={true} />
-                  </div>
-                  <div className="text-xs text-muted-foreground font-mono truncate">
-                    {mint}
-                  </div>
-                </div>
-              </Link>
-            ))}
-            {migratedMints.size === 0 && (
-              <div className="text-center py-10 text-muted-foreground border border-dashed border-border rounded-xl">
-                Waiting for migrations...
-              </div>
-            )}
-          </div>
-        </section>
       </div>
     </div>
   );
