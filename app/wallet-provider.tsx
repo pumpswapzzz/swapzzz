@@ -21,6 +21,7 @@ export function WalletContextProvider({ children }: { children: React.ReactNode 
     () => [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
+      new BackpackWalletAdapter(),
     ],
     []
   );
