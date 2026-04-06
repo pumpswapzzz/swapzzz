@@ -86,15 +86,15 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
             className="bg-zinc-900 border border-zinc-800 hover:border-purple-500 rounded-2xl p-4 flex gap-4 transition-all"
           >
             <img
-              src={trade.image || '/placeholder-token.png'}
+              src={trade.image || 'https://via.placeholder.com/48/1F2937/FFFFFF?text=?'}
               alt={trade.name || 'Token'}
               className="w-12 h-12 rounded-full object-cover flex-shrink-0 bg-zinc-800"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                if (target.src !== '/placeholder-token.png') {
-                  target.src = '/placeholder-token.png';
+                if (target.src !== 'https://via.placeholder.com/48/1F2937/FFFFFF?text=?') {
+                  target.src = 'https://via.placeholder.com/48/1F2937/FFFFFF?text=?';
                 }
-                target.onerror = null; // stop further errors
+                target.onerror = null; // prevent infinite loop
               }}
             />
             <div className="flex-1 min-w-0">
