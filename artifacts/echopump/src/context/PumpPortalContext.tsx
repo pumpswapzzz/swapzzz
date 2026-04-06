@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
-import { resolveTokenImage } from '@/hooks/usePumpPortalWS';
+import { publicEnv } from '@/lib/env';
 
 export interface LiveTrade {
   mint: string;
@@ -47,10 +47,7 @@ const PumpPortalContext = createContext<PumpPortalState>({
   wsError: null,
 });
 
-const API_KEY =
-  (import.meta.env.NEXT_PUBLIC_PUMP_PORTAL_API_KEY as string) ||
-  (import.meta.env.VITE_PUMP_PORTAL_API_KEY as string) ||
-  '';
+const API_KEY = publicEnv.NEXT_PUBLIC_PUMP_PORTAL_API_KEY;
 
 export function PumpPortalProvider({ children }: { children: ReactNode }) {
   const [liveTrades, setLiveTrades] = useState<LiveTrade[]>([]);
@@ -87,7 +84,7 @@ export function PumpPortalProvider({ children }: { children: ReactNode }) {
         console.log('[PumpPortal WS] Connected ✓');
 
         ws.send(JSON.stringify({ method: 'subscribeNewToken' }));
-        ws.send(JSON.stringify({ method: 'subscribeTokenTrade', keys: ['all'] }));
+        ws.send(JSON.stringify({ method: 'subscribe', channel: 'trades' }));
         ws.send(JSON.stringify({ method: 'subscribeMigration' }));
         if (API_KEY) {
           ws.send(JSON.stringify({ method: 'subscribeAccountTrade', keys: ['all'] }));
@@ -102,14 +99,14 @@ export function PumpPortalProvider({ children }: { children: ReactNode }) {
 
           if (data.txType === 'buy' || data.txType === 'sell') {
             const tradeBase: Omit<LiveTrade, 'imageUri'> = {
-              mint: data.mint || '',
+              mint: data.mint || data.tokenAddress || '',
               traderPublicKey: data.traderPublicKey || data.user || '',
               txType: data.txType,
-              solAmount: Number(data.solAmount ?? data.sol_amount ?? 0),
+              solAmount: Number(data.solAmount ?? data.sol_amount ?? data.amount ?? 0),
               tokenAmount: Number(data.tokenAmount ?? data.token_amount ?? 0),
               timestamp: data.timestamp ? Number(data.timestamp) * 1000 : Date.now(),
-              name: data.name || '',
-              symbol: data.symbol || data.mint?.substring(0, 6) || '',
+              name: data.name || data.symbol || '',
+              symbol: data.symbol || data.name || data.mint?.substring(0, 6) || '',
               uri: data.uri || data.metadata?.uri || '',
               is_migrated: migratedMintsRef.current.has(data.mint),
               marketCapSol: data.marketCapSol != null ? Number(data.marketCapSol) : undefined,
@@ -117,21 +114,9 @@ export function PumpPortalProvider({ children }: { children: ReactNode }) {
             };
 
             setLiveTrades((prev) => [{ ...tradeBase, imageUri: '' }, ...prev].slice(0, 200));
+          }
 
-            if (tradeBase.uri) {
-              resolveTokenImage(tradeBase.uri).then((imageUri) => {
-                if (destroyedRef.current || !imageUri) return;
-                setLiveTrades((prev) =>
-                  prev.map((t) =>
-                    t.mint === tradeBase.mint && t.timestamp === tradeBase.timestamp
-                      ? { ...t, imageUri }
-                      : t
-                  )
-                );
-              });
-            }
-
-          } else if (data.txType === 'create' || (data.mint && data.name && data.symbol && !data.txType)) {
+          if (data.txType === 'create' || (data.mint && data.name && data.symbol && !data.txType)) {
             const uri = data.uri || data.metadata?.uri || '';
             const tokenBase: NewToken = {
               mint: data.mint,
@@ -146,17 +131,9 @@ export function PumpPortalProvider({ children }: { children: ReactNode }) {
             };
 
             setNewTokens((prev) => [tokenBase, ...prev].slice(0, 100));
+          }
 
-            if (uri) {
-              resolveTokenImage(uri).then((imageUri) => {
-                if (destroyedRef.current || !imageUri) return;
-                setNewTokens((prev) =>
-                  prev.map((t) => (t.mint === tokenBase.mint ? { ...t, imageUri } : t))
-                );
-              });
-            }
-
-          } else if (data.signature && data.mint && !data.txType) {
+          if (data.signature && data.mint && !data.txType) {
             console.log('[PumpPortal WS] Migration:', data.mint);
             migratedMintsRef.current = new Set([...migratedMintsRef.current, data.mint]);
             setMigratedMints((prev) => new Set([...prev, data.mint]));
@@ -203,3 +180,15 @@ export function PumpPortalProvider({ children }: { children: ReactNode }) {
 export function usePumpPortal() {
   return useContext(PumpPortalContext);
 }
+
+export async function resolveTokenImage(uri: string) {
+  try {
+    if (!uri) return '';
+    const res = await fetch(uri);
+    const json = await res.json();
+    return json.image || json.image_uri || '';
+  } catch (e) {
+    return '';
+  }
+}
+

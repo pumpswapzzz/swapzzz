@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { WalletContextProvider } from './wallet-provider'
 import { PumpPortalProvider } from '@/context/PumpPortalContext'
+import { publicEnv } from '@/lib/env'
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,11 @@ export default function RootLayout({
         <PumpPortalProvider>
           <WalletContextProvider>
             {children}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="fixed bottom-4 right-4 z-50 rounded-xl bg-black px-3 py-2 text-xs text-emerald-400 shadow-xl shadow-emerald-500/20">
+                API Key loaded: {publicEnv.NEXT_PUBLIC_PUMP_PORTAL_API_KEY ? '✅ YES' : '❌ NO'}
+              </div>
+            )}
           </WalletContextProvider>
         </PumpPortalProvider>
       </body>

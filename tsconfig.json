@@ -18,9 +18,11 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "jsx": "preserve",
+    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./artifacts/echopump/src/*"
+        "./artifacts/echopump/src/*",
+        "./lib/*"
       ]
     },
     "plugins": [
