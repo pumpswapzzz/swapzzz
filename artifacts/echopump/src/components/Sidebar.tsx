@@ -1,3 +1,5 @@
+'use client';
+
 import { useGetTrendingBroadcasts, useGetBroadcastStats } from "@workspace/api-client-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Link } from "wouter";
@@ -92,7 +94,7 @@ export function Sidebar({ newTokens }: { newTokens: NewToken[] }) {
             </div>
           ) : trending?.broadcasts?.length ? (
             <div className="space-y-4">
-              {trending.broadcasts.slice(0, 4).map((b) => (
+              {(trending?.broadcasts ?? []).slice(0, 4).map((b) => (
                 <Link key={b.id} href={`/token/${b.mint}`} className="flex items-center gap-3 hover:bg-muted/50 p-2 -mx-2 rounded-md transition-colors" data-testid={`link-trending-${b.id}`}>
                   {b.token_image_uri ? (
                     <img src={b.token_image_uri} alt={b.token_symbol} className="h-8 w-8 rounded-full object-cover bg-muted" />

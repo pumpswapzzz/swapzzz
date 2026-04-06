@@ -121,7 +121,7 @@ export default function LiveFeed() {
               />
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-white truncate">
-                  {trade.name || trade.mint.slice(0, 10) + '...'}
+                  {trade.name || (trade.mint?.slice(0, 10) ?? '---') + '...'}
                 </div>
                 <div className="text-xs text-gray-500 font-mono truncate">{trade.mint}</div>
                 <div

@@ -1,3 +1,5 @@
+'use client';
+
 import { useGetTrendingBroadcasts } from "@workspace/api-client-react";
 import { usePumpPortalWS } from "@/hooks/usePumpPortalWS";
 import { BroadcastCard } from "@/components/BroadcastCard";

@@ -98,7 +98,7 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
               }}
             />
             <div className="flex-1 min-w-0">
-              <div className="font-bold text-white truncate">{trade.name || trade.mint.slice(0, 12) + '...'}</div>
+              <div className="font-bold text-white truncate">{trade.name || (trade.mint?.slice(0, 12) ?? '---') + '...'}</div>
               <div className="text-xs text-gray-500 font-mono break-all mt-0.5">{trade.mint}</div>
 
               <div
