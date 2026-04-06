@@ -31,7 +31,7 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
             mint: data.mint,
             name: data.name || data.token?.name,
             symbol: data.symbol || data.token?.symbol,
-            image: data.image || data.metadata?.image || data.uri || data.token?.image,
+            image: data.image || data.metadata?.image || data.uri || data.token?.image || null,
             txType: data.txType,
             solAmount: data.solAmount,
             tokenAmount: data.tokenAmount,
@@ -43,7 +43,7 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
             mint: data.mint,
             name: data.name || 'New Token',
             symbol: data.symbol,
-            image: data.image || data.metadata?.image || data.uri,
+            image: data.image || data.metadata?.image || data.uri || data.token?.image || null,
             txType: 'create',
             initialBuy: data.initialBuy,
             signature: data.signature,
@@ -86,13 +86,15 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
             className="bg-zinc-900 border border-zinc-800 hover:border-purple-500 rounded-2xl p-4 flex gap-4 transition-all"
           >
             <img
-              src={trade.image 
-                ? trade.image 
+              src={trade.image
+                ? trade.image
                 : `https://via.placeholder.com/48/1F2937/FFFFFF?text=${(trade.symbol || trade.name || '?').slice(0,1)}`}
               alt={trade.name || 'Token'}
-              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+              className="w-12 h-12 rounded-full object-cover flex-shrink-0 bg-zinc-800"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48/1F2937/FFFFFF?text=?';
+                const target = e.target as HTMLImageElement;
+                target.src = 'https://via.placeholder.com/48/1F2937/FFFFFF?text=?';
+                target.onerror = null;
               }}
             />
             <div className="flex-1 min-w-0">
