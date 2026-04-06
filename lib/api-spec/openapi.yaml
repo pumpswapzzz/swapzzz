@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: EchoPump API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: broadcasts
+    description: Social broadcast operations
+  - name: users
+    description: User profile operations
+  - name: follows
+    description: Follow system operations
+  - name: likes
+    description: Like system operations
+  - name: discovery
+    description: Token discovery operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,402 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /broadcasts:
+    get:
+      operationId: listBroadcasts
+      tags: [broadcasts]
+      summary: List broadcasts with pagination
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: wallet
+          in: query
+          schema:
+            type: string
+          description: Filter by wallet address
+        - name: mint
+          in: query
+          schema:
+            type: string
+          description: Filter by token mint address
+        - name: following
+          in: query
+          schema:
+            type: boolean
+          description: Filter to followed wallets only (requires viewer_wallet)
+        - name: viewer_wallet
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of broadcasts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  broadcasts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Broadcast"
+                  total:
+                    type: integer
+                required: [broadcasts, total]
+    post:
+      operationId: createBroadcast
+      tags: [broadcasts]
+      summary: Create a broadcast after a trade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBroadcastBody"
+      responses:
+        "201":
+          description: Broadcast created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Broadcast"
+
+  /broadcasts/{id}:
+    get:
+      operationId: getBroadcast
+      tags: [broadcasts]
+      summary: Get a single broadcast
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Broadcast
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Broadcast"
+
+  /broadcasts/stats:
+    get:
+      operationId: getBroadcastStats
+      tags: [broadcasts]
+      summary: Get broadcast stats (total count, buy vs sell ratio, active traders)
+      responses:
+        "200":
+          description: Broadcast statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BroadcastStats"
+
+  /broadcasts/trending:
+    get:
+      operationId: getTrendingBroadcasts
+      tags: [broadcasts]
+      summary: Get trending broadcasts sorted by likes and recency
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Trending broadcasts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  broadcasts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Broadcast"
+                required: [broadcasts]
+
+  /likes/{broadcastId}:
+    post:
+      operationId: likeBroadcast
+      tags: [likes]
+      summary: Like a broadcast
+      parameters:
+        - name: broadcastId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wallet_address:
+                  type: string
+              required: [wallet_address]
+      responses:
+        "200":
+          description: Like toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+                  likes_count:
+                    type: integer
+                required: [liked, likes_count]
+    get:
+      operationId: getLikes
+      tags: [likes]
+      summary: Check if a wallet liked a broadcast
+      parameters:
+        - name: broadcastId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: wallet_address
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Like status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+                  likes_count:
+                    type: integer
+                required: [liked, likes_count]
+
+  /users/{wallet}:
+    get:
+      operationId: getUserProfile
+      tags: [users]
+      summary: Get user profile by wallet address
+      parameters:
+        - name: wallet
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+    put:
+      operationId: upsertUserProfile
+      tags: [users]
+      summary: Create or update user profile
+      parameters:
+        - name: wallet
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertUserProfileBody"
+      responses:
+        "200":
+          description: Updated user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /users/{wallet}/stats:
+    get:
+      operationId: getUserStats
+      tags: [users]
+      summary: Get user trading stats (broadcast count, followers, following, total volume)
+      parameters:
+        - name: wallet
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStats"
+
+  /follows:
+    post:
+      operationId: toggleFollow
+      tags: [follows]
+      summary: Follow or unfollow a wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToggleFollowBody"
+      responses:
+        "200":
+          description: Follow state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  following:
+                    type: boolean
+                required: [following]
+
+  /follows/{wallet}/followers:
+    get:
+      operationId: getFollowers
+      tags: [follows]
+      summary: Get list of followers for a wallet
+      parameters:
+        - name: wallet
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Followers list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  followers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserProfile"
+                required: [followers]
+
+  /follows/{wallet}/following:
+    get:
+      operationId: getFollowing
+      tags: [follows]
+      summary: Get list of wallets this user follows
+      parameters:
+        - name: wallet
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Following list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  following:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserProfile"
+                required: [following]
+
+  /follows/check:
+    get:
+      operationId: checkFollow
+      tags: [follows]
+      summary: Check if follower_wallet follows followed_wallet
+      parameters:
+        - name: follower_wallet
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: followed_wallet
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Follow status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  following:
+                    type: boolean
+                required: [following]
+
+  /discovery/leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [discovery]
+      summary: Get top traders by broadcast count and volume
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Trader leaderboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  traders:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TraderLeaderboardEntry"
+                required: [traders]
+
+  /discovery/activity-feed:
+    get:
+      operationId: getActivityFeed
+      tags: [discovery]
+      summary: Get recent activity across the platform (trade stats by hour)
+      responses:
+        "200":
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hourly_stats:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/HourlyActivity"
+                  platform_summary:
+                    $ref: "#/components/schemas/PlatformSummary"
+                required: [hourly_stats, platform_summary]
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +436,212 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Broadcast:
+      type: object
+      properties:
+        id:
+          type: string
+        wallet_address:
+          type: string
+        mint:
+          type: string
+        token_name:
+          type: string
+        token_symbol:
+          type: string
+        token_image_uri:
+          type: string
+        action:
+          type: string
+          enum: [buy, sell]
+        amount_sol:
+          type: number
+        token_amount:
+          type: number
+        price:
+          type: number
+        message:
+          type: string
+        tx_signature:
+          type: string
+        is_migrated:
+          type: boolean
+        created_at:
+          type: string
+        likes_count:
+          type: integer
+        username:
+          type: string
+      required:
+        - id
+        - wallet_address
+        - mint
+        - action
+        - is_migrated
+        - created_at
+        - likes_count
+
+    CreateBroadcastBody:
+      type: object
+      properties:
+        wallet_address:
+          type: string
+        mint:
+          type: string
+        token_name:
+          type: string
+        token_symbol:
+          type: string
+        token_image_uri:
+          type: string
+        action:
+          type: string
+          enum: [buy, sell]
+        amount_sol:
+          type: number
+        token_amount:
+          type: number
+        price:
+          type: number
+        message:
+          type: string
+        tx_signature:
+          type: string
+        is_migrated:
+          type: boolean
+      required:
+        - wallet_address
+        - mint
+        - action
+        - is_migrated
+
+    BroadcastStats:
+      type: object
+      properties:
+        total_broadcasts:
+          type: integer
+        total_buys:
+          type: integer
+        total_sells:
+          type: integer
+        active_traders_24h:
+          type: integer
+        total_volume_sol:
+          type: number
+      required:
+        - total_broadcasts
+        - total_buys
+        - total_sells
+        - active_traders_24h
+        - total_volume_sol
+
+    UserProfile:
+      type: object
+      properties:
+        wallet_address:
+          type: string
+        username:
+          type: string
+        bio:
+          type: string
+        created_at:
+          type: string
+      required:
+        - wallet_address
+        - created_at
+
+    UpsertUserProfileBody:
+      type: object
+      properties:
+        username:
+          type: string
+        bio:
+          type: string
+
+    UserStats:
+      type: object
+      properties:
+        wallet_address:
+          type: string
+        broadcast_count:
+          type: integer
+        followers_count:
+          type: integer
+        following_count:
+          type: integer
+        total_volume_sol:
+          type: number
+        total_buys:
+          type: integer
+        total_sells:
+          type: integer
+      required:
+        - wallet_address
+        - broadcast_count
+        - followers_count
+        - following_count
+        - total_volume_sol
+        - total_buys
+        - total_sells
+
+    ToggleFollowBody:
+      type: object
+      properties:
+        follower_wallet:
+          type: string
+        followed_wallet:
+          type: string
+      required: [follower_wallet, followed_wallet]
+
+    TraderLeaderboardEntry:
+      type: object
+      properties:
+        wallet_address:
+          type: string
+        username:
+          type: string
+        broadcast_count:
+          type: integer
+        total_volume_sol:
+          type: number
+        followers_count:
+          type: integer
+      required:
+        - wallet_address
+        - broadcast_count
+        - total_volume_sol
+        - followers_count
+
+    HourlyActivity:
+      type: object
+      properties:
+        hour:
+          type: string
+        trade_count:
+          type: integer
+        buy_count:
+          type: integer
+        sell_count:
+          type: integer
+        volume_sol:
+          type: number
+      required: [hour, trade_count, buy_count, sell_count, volume_sol]
+
+    PlatformSummary:
+      type: object
+      properties:
+        total_users:
+          type: integer
+        total_broadcasts:
+          type: integer
+        total_volume_sol:
+          type: number
+        active_traders_24h:
+          type: integer
+      required:
+        - total_users
+        - total_broadcasts
+        - total_volume_sol
+        - active_traders_24h
