@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { WalletContextProvider } from './wallet-provider'
+import { PumpPortalProvider } from '@/context/PumpPortalContext'
 
 export const dynamic = 'force-dynamic';
 
@@ -17,9 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <WalletContextProvider>
-          {children}
-        </WalletContextProvider>
+        <PumpPortalProvider>
+          <WalletContextProvider>
+            {children}
+          </WalletContextProvider>
+        </PumpPortalProvider>
       </body>
     </html>
   )

@@ -1,3 +1,5 @@
+'use client';
+
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { resolveTokenImage } from '@/hooks/usePumpPortalWS';
 

@@ -4,6 +4,7 @@ import React from 'react';
 import WalletConnect from '@/components/WalletConnect';
 import LiveFeed from '@/components/LiveFeed';
 import PortfolioSidebar from '@/components/PortfolioSidebar';
+import { TrendingSection } from '@/components/TrendingSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,9 +21,10 @@ export default function Home() {
       </header>
 
       <div className="flex h-[calc(100vh-73px)]">
-        {/* Main Live Feed */}
-        <div className="flex-1 overflow-auto">
+        {/* Main Content */}
+        <div className="flex-1 overflow-auto p-6 space-y-8">
           <LiveFeed />
+          <TrendingSection />
         </div>
 
         {/* Right Sidebar */}
