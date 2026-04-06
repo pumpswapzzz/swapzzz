@@ -1,0 +1,56 @@
+You are an expert full-stack Solana/web3 developer. Build a complete, production-ready web app that is a perfect clone of Vector.fun v2's social trading experience, but for the entire Pump.fun ecosystem on Solana. The app name is "EchoPump". It must include BOTH coins still in the bonding curve AND coins that have completed the bonding curve (migrated to PumpSwap).
+
+TECH STACK (use exactly these, no changes):
+- Next.js 14+ App Router + TypeScript + Tailwind CSS + shadcn/ui + Radix primitives
+- Vercel deployment ready
+- @solana/wallet-adapter-react + @solana/wallet-adapter-wallets (Phantom, Backpack, Solflare, etc.)
+- @solana/web3.js for any raw tx handling
+- Supabase (Postgres + Realtime + Auth) for social features
+- PumpPortal free WebSocket: wss://pumpportal.fun/api/data (use subscribeNewToken, subscribeTokenTrade, subscribeMigration, subscribeAccountTrade)
+- PumpPortal Local Transaction API: POST https://pumpportal.fun/api/trade-local 
+  - Always use "pool": "auto" so it works for BOTH bonding-curve tokens AND migrated PumpSwap tokens.
+  - Return the VersionedTransaction for the user to sign client-side with their wallet. Use user's own RPC (Helius/QuickNode free tier or public).
+- Environment variables: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_PUMP_PORTAL_API_KEY (make it optional but preferred)
+
+CORE FEATURES (make it feel exactly like Vector v2):
+1. Wallet connect button (top right). After connect, show sidebar with portfolio balances (SOL + all held pump tokens via PumpPortal data + Birdeye fallback if needed).
+2. Live social feed ("Broadcasts"):
+   - Real-time scrolling list of on-chain trades from PumpPortal WebSocket (both bonding-curve and migrated PumpSwap tokens).
+   - Each broadcast card: trader wallet (clickable), token CA + name + image + "Bonding" or "PumpSwap" badge (detected via migration events), buy/sell amount, price, timestamp, optional short text message.
+   - Users can optionally "broadcast" their own executed trade: after a successful swap, show a modal to type a message (max 140 chars) and sign a simple message with wallet to publish it.
+   - Store broadcasts in Supabase (table: broadcasts with columns: id, wallet, mint, action, amount, price, message, tx_signature, is_migrated, timestamp, likes_count).
+3. Follow system: Search wallets or trending tokens → follow button. Followed traders' broadcasts appear highlighted or in a "Following" tab. Store follows in Supabase.
+4. One-click copy trade: Click any broadcast → "Copy this trade" button instantly builds the exact same buy/sell via PumpPortal Local API with "pool": "auto", user approves in wallet.
+5. Trending / Discovery section: Live new tokens (subscribeNewToken), hot movers from trade volume, and graduated tokens (subscribeMigration).
+6. Responsive dark UI (black/neon accents like Vector): top nav, main feed, right sidebar (portfolio + trending), mobile-friendly. Show a small badge on each token card: "Bonding Curve" or "PumpSwap" based on migration status.
+7. Auth: Use wallet address as user ID (SIWE-style with Supabase). No passwords.
+8. Realtime: Supabase Realtime subscriptions for new broadcasts, likes, follows so feed updates instantly for all users.
+9. Extra polish: Like button on broadcasts, shareable profile links (/u/[wallet]), token page with basic info (including migration status), toast notifications for tx success/failure, loading skeletons.
+
+DATABASE SCHEMA (create these Supabase tables automatically or give me the SQL):
+- users: wallet_address (primary), username (optional), bio, created_at
+- follows: follower_wallet, followed_wallet
+- broadcasts: id, wallet_address, mint, action ('buy'|'sell'), amount_sol_or_tokens, price, message, tx_signature, is_migrated (boolean), created_at, likes_count
+- likes: broadcast_id, wallet_address
+
+SECURITY & BEST PRACTICES:
+- Never store private keys or seed phrases.
+- All transactions signed client-side only.
+- Rate-limit WebSocket subscriptions client-side.
+- Handle disconnects and reconnections gracefully.
+- Add basic error handling and user-friendly messages (e.g. "Transaction failed – try higher priority fee").
+- Pure Pump.fun ecosystem only (tokens launched on pump.fun, whether still on bonding curve or migrated to PumpSwap).
+- Make it UK-compliant friendly: add a small footer disclaimer "Non-custodial DEX frontend – trade at your own risk".
+
+DEVELOPMENT PLAN:
+1. First, set up the full Next.js project structure with all dependencies.
+2. Implement wallet adapter + connection.
+3. Set up Supabase client and create the tables (or provide SQL).
+4. Implement PumpPortal WebSocket connection with all subscriptions (including subscribeMigration to detect graduated tokens) and feed rendering.
+5. Build the broadcast UI + realtime updates + migration badges.
+6. Implement the Local Transaction API buy/sell flow with "pool": "auto" and wallet signing.
+7. Add follow + copy-trade logic.
+8. Polish the UI to match Vector's clean social-trading vibe.
+9. Finally, add deployment instructions for Vercel and .env example.
+
+Make the app beautiful, fast, and identical to Vector's social feel but covering the full Pump.fun lifecycle (bonding curve + PumpSwap).
