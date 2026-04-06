@@ -6,8 +6,8 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  output: 'standalone',     // This is important for Vercel
-  distDir: '.next',         // Explicitly set output directory
+  output: 'standalone',     // Use standalone output instead of static export
+  distDir: '.next',
 };
 
 export default nextConfig;
