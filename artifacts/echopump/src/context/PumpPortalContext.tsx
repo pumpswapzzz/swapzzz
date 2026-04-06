@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
-import { publicEnv } from '@/lib/env';
+import { env } from '@/lib/env';
 
 export interface LiveTrade {
   mint: string;
@@ -47,7 +47,7 @@ const PumpPortalContext = createContext<PumpPortalState>({
   wsError: null,
 });
 
-const API_KEY = publicEnv.NEXT_PUBLIC_PUMP_PORTAL_API_KEY;
+const API_KEY = env.NEXT_PUBLIC_PUMP_PORTAL_API_KEY;
 
 export function PumpPortalProvider({ children }: { children: ReactNode }) {
   const [liveTrades, setLiveTrades] = useState<LiveTrade[]>([]);
