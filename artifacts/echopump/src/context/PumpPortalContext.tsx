@@ -31,7 +31,12 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
             mint: data.mint,
             name: data.name || data.token?.name,
             symbol: data.symbol || data.token?.symbol,
-            image: data.image || data.metadata?.image || data.uri || data.token?.image || null,
+            image:
+              data.image ||
+              (data.metadata && (data.metadata.image || data.metadata.uri)) ||
+              data.uri ||
+              data.token?.image ||
+              null,
             txType: data.txType,
             solAmount: data.solAmount,
             tokenAmount: data.tokenAmount,
@@ -43,7 +48,12 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
             mint: data.mint,
             name: data.name || 'New Token',
             symbol: data.symbol,
-            image: data.image || data.metadata?.image || data.uri || data.token?.image || null,
+            image:
+              data.image ||
+              (data.metadata && (data.metadata.image || data.metadata.uri)) ||
+              data.uri ||
+              data.token?.image ||
+              null,
             txType: 'create',
             initialBuy: data.initialBuy,
             signature: data.signature,
@@ -94,7 +104,7 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
                 if (target.src !== 'https://via.placeholder.com/48/1F2937/FFFFFF?text=?') {
                   target.src = 'https://via.placeholder.com/48/1F2937/FFFFFF?text=?';
                 }
-                target.onerror = null; // prevent infinite loop
+                target.onerror = null;
               }}
             />
             <div className="flex-1 min-w-0">
