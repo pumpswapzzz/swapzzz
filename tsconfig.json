@@ -19,6 +19,7 @@
     "resolveJsonModule": true,
     "jsx": "preserve",
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@/*": [
         "./artifacts/echopump/src/*",
