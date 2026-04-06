@@ -130,7 +130,7 @@ export function Sidebar({ newTokens }: { newTokens: NewToken[] }) {
         </CardHeader>
         <CardContent>
           <div className="space-y-3 h-48 overflow-y-auto pr-2 custom-scrollbar">
-            {newTokens.slice(0, 10).map((t, i) => (
+            {(newTokens ?? []).slice(0, 10).map((t, i) => (
               <Link key={`${t.mint}-${i}`} href={`/token/${t.mint}`} className="block group" data-testid={`link-new-${t.mint}`}>
                 <div className="text-sm font-medium group-hover:text-primary transition-colors flex justify-between">
                   <span className="truncate pr-2">{t.symbol}</span>

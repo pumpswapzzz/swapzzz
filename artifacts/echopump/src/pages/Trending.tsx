@@ -42,7 +42,7 @@ export function Trending() {
             New Launches
           </h2>
           <div className="space-y-4">
-            {newTokens.slice(0, 10).map((token, i) => (
+            {(newTokens ?? []).slice(0, 10).map((token, i) => (
               <Link 
                 key={`${token.mint}-${i}`} 
                 href={`/token/${token.mint}`}
@@ -82,7 +82,7 @@ export function Trending() {
             Graduated (PumpSwap)
           </h2>
           <div className="space-y-4">
-            {Array.from(migratedMints).slice(0, 10).map((mint, i) => (
+            {(migratedMints ? Array.from(migratedMints) : []).slice(0, 10).map((mint, i) => (
               <Link 
                 key={`${mint}-${i}`} 
                 href={`/token/${mint}`}

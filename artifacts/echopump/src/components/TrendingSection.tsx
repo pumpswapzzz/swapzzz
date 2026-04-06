@@ -10,7 +10,7 @@ export function TrendingSection() {
     <div className="space-y-4">
       <h2 className="text-2xl font-bold text-white">Trending Tokens</h2>
       <div className="space-y-3">
-        {newTokens.slice(0, 10).map((token, index) => (
+        {(newTokens ?? []).slice(0, 10).map((token, index) => (
           <div key={token.mint} className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:bg-zinc-800 transition-colors">
             <div className="flex items-start gap-3">
               <img
