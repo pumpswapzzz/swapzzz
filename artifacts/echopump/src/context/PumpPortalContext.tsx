@@ -16,7 +16,6 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
 
     ws.onopen = () => {
       setConnectionStatus('✅ Connected - Listening for real buy/sell trades');
-      console.log('PumpPortal WebSocket connected');
       ws.send(JSON.stringify({ method: 'subscribeNewToken' }));
       ws.send(JSON.stringify({ method: 'subscribeTokenTrade', keys: [] }));
     };
@@ -56,7 +55,7 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
           setLiveTrades((prev) => [trade, ...prev].slice(0, 60));
         }
       } catch (e) {
-        console.error('Failed to parse PumpPortal message:', e);
+        // Silently handle parse errors to reduce console spam
       }
     };
 
@@ -86,17 +85,20 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
             key={`${trade.signature}-${index}`}
             className="bg-zinc-900 border border-zinc-800 hover:border-purple-500 rounded-2xl p-4 flex gap-4 transition-all"
           >
-            <img
-              src={
-                trade.image ||
-                `https://via.placeholder.com/48/4F46E5/FFFFFF?text=${encodeURIComponent(trade.symbol?.[0] || '?')}`
-              }
-              alt={trade.name}
-              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48/4F46E5/FFFFFF?text=?';
-              }}
-            />
+            {trade.image ? (
+              <img
+                src={trade.image}
+                alt={trade.name}
+                className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                {(trade.symbol || '?').charAt(0).toUpperCase()}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <div className="font-bold text-white truncate">{trade.name || (trade.mint?.slice(0, 12) ?? '---') + '...'}</div>
               <div className="text-xs text-gray-500 font-mono break-all mt-0.5">{trade.mint}</div>
