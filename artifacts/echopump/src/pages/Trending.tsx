@@ -23,7 +23,7 @@ export function Trending() {
           <div className="text-center py-10">Loading trending...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trending?.broadcasts?.slice(0, 6).map((broadcast) => (
+            {trending?.broadcasts?.slice(0, 6).map((broadcast: any) => (
               <BroadcastCard key={broadcast.id} broadcast={broadcast} />
             ))}
             {(!trending?.broadcasts || trending.broadcasts.length === 0) && (
@@ -59,11 +59,11 @@ export function Trending() {
                   <div className="flex justify-between">
                     <span className="font-bold truncate">{token.name} (${token.symbol})</span>
                     <span className="text-xs text-muted-foreground font-mono">
-                      {formatDistanceToNow(token.timestamp, { addSuffix: true })}
+                      {token.timestamp ? formatDistanceToNow(token.timestamp, { addSuffix: true }) : 'Just now'}
                     </span>
                   </div>
                   <div className="text-xs font-mono text-muted-foreground mt-1">
-                    MC: {token.marketCapSol.toFixed(1)} SOL
+                    MC: {(token.marketCapSol ?? 0).toFixed(1)} SOL
                   </div>
                 </div>
               </Link>

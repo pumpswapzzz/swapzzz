@@ -129,7 +129,12 @@ export function PumpPortalProvider({ children }: { children: React.ReactNode }) 
 }
 
 // Stub exports for backward compatibility
-export function usePumpPortal() {
+export function usePumpPortal(): {
+  liveTrades: LiveTrade[];
+  connectionStatus: string;
+  newTokens: NewToken[];
+  migratedMints: Set<string>;
+} {
   return {
     liveTrades: [],
     connectionStatus: 'Disconnected',
@@ -162,8 +167,10 @@ export type NewToken = {
   name: string;
   symbol: string;
   image?: string;
-  creator: string;
-  signature: string;
-  timestamp: number;
+  imageUri?: string;
+  creator?: string;
+  signature?: string;
+  timestamp?: number;
+  marketCapSol?: number;
 };
 
