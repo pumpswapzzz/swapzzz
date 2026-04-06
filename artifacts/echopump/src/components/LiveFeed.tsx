@@ -30,7 +30,6 @@ export default function LiveFeed() {
 
     ws.onopen = () => {
       setStatus('✅ Connected - Listening for real buy/sell trades');
-      console.log('✅ PumpPortal WebSocket connected');
       ws.send(JSON.stringify({ method: 'subscribeNewToken' }));
       ws.send(JSON.stringify({ method: 'subscribeTokenTrade', keys: [] })); // all trades
     };
@@ -38,7 +37,6 @@ export default function LiveFeed() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('PumpPortal message:', data);
 
         let trade: Trade | null = null;
 
@@ -47,7 +45,7 @@ export default function LiveFeed() {
             mint: data.mint,
             name: data.name,
             symbol: data.symbol,
-            image: data.image || data.uri || data.metadata?.uri,
+            image: data.image || data.metadata?.image || data.uri || data.token?.image || null,
             txType: data.txType,
             solAmount: data.solAmount,
             tokenAmount: data.tokenAmount,
@@ -59,7 +57,7 @@ export default function LiveFeed() {
             mint: data.mint,
             name: data.name || 'New Token',
             symbol: data.symbol,
-            image: data.image || data.uri || data.metadata?.uri,
+            image: data.image || data.metadata?.image || data.uri || data.token?.image || null,
             txType: 'create',
             initialBuy: data.initialBuy,
             signature: data.signature,
@@ -106,17 +104,15 @@ export default function LiveFeed() {
               className="bg-zinc-900 border border-zinc-800 hover:border-purple-500 rounded-2xl p-4 flex gap-4 transition-all"
             >
               <img
-                src={
-                  trade.image ||
-                  `https://via.placeholder.com/48/4F46E5/FFFFFF?text=${encodeURIComponent(
-                    trade.symbol || '?'
-                  )}`
-                }
-                alt={trade.name}
-                className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                src={trade.image || 'https://via.placeholder.com/48/1F2937/FFFFFF?text=?'}
+                alt={trade.name || 'Token'}
+                className="w-12 h-12 rounded-full object-cover flex-shrink-0 bg-zinc-800"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    'https://via.placeholder.com/48/4F46E5/FFFFFF?text=?';
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== 'https://via.placeholder.com/48/1F2937/FFFFFF?text=?') {
+                    target.src = 'https://via.placeholder.com/48/1F2937/FFFFFF?text=?';
+                  }
+                  target.onerror = null; // prevent infinite loop
                 }}
               />
               <div className="flex-1 min-w-0">
