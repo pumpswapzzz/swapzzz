@@ -30,7 +30,7 @@ export default function PortfolioSidebar() {
         setSolBalance(balance / LAMPORTS_PER_SOL);
 
         // Get token accounts
-        const tokenAccounts = await connection.getTokenAccountsByOwner(publicKey, {
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
           programId: TOKEN_PROGRAM_ID,
         });
 
@@ -38,21 +38,22 @@ export default function PortfolioSidebar() {
 
         for (const account of tokenAccounts.value) {
           try {
-            const accountInfo = await connection.getAccountInfo(account.account.owner);
-            const mintInfo = await connection.getAccountInfo(account.account.data.slice(0, 32));
-            // This is simplified - in a real app you'd fetch metadata from Metaplex
-            const mint = new PublicKey(account.account.data.slice(0, 32));
-            const amount = Number(account.account.data.slice(64, 72).readBigUInt64LE());
+            const parsedInfo = account.account.data.parsed.info;
+            const mint = parsedInfo.mint;
+            const amount = parsedInfo.tokenAmount.uiAmount;
+            const decimals = parsedInfo.tokenAmount.decimals;
 
-            tokenData.push({
-              mint: mint.toBase58(),
-              amount,
-              decimals: 9, // Assume 9 decimals for simplicity
-              symbol: 'UNKNOWN',
-              name: 'Unknown Token',
-            });
+            if (amount > 0) {
+              tokenData.push({
+                mint,
+                amount,
+                decimals,
+                symbol: 'UNKNOWN', // Would need metadata fetch
+                name: 'Unknown Token',
+              });
+            }
           } catch (error) {
-            console.error('Error fetching token data:', error);
+            console.error('Error parsing token account:', error);
           }
         }
 
@@ -120,7 +121,7 @@ export default function PortfolioSidebar() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-white text-sm">{(token.amount / Math.pow(10, token.decimals)).toFixed(2)}</div>
+                    <div className="text-white text-sm">{token.amount.toFixed(2)}</div>
                   </div>
                 </div>
               </div>
