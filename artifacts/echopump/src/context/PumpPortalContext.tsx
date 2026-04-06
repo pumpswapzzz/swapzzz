@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
-import { env } from '@/lib/env';
+import { env } from '../lib/env';
 
 export interface LiveTrade {
   mint: string;
