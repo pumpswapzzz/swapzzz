@@ -57,7 +57,7 @@ export function PumpPortalProvider({ children }: { children: ReactNode }) {
   const [connectionStatus, setConnectionStatus] = useState<PumpPortalState['connectionStatus']>('disconnected');
   const [wsError, setWsError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const destroyedRef = useRef(false);
 
   useEffect(() => {
